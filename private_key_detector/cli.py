@@ -62,7 +62,26 @@ class CLI:
 
         # Analyze files
         print("Starting analysis...")
-        results = self.detector.analyze_multiple_files(file_paths)
+        all_results = self.detector.analyze_all_files_all_keys(file_paths)
+
+        # Flatten results for compatibility with existing code
+        results = []
+        for file_path, keys in all_results.items():
+            if keys:
+                # Use the first key for compatibility with existing extraction logic
+                results.append(keys[0])
+            else:
+                # Create empty result if no keys found
+                from models import DERKeyAnalysis
+                results.append(DERKeyAnalysis(
+                    file_path=file_path,
+                    file_size=0,
+                    key_found=False,
+                    key_offset=None,
+                    key_length=0,
+                    key_hash="",
+                    public_key=""
+                ))
 
         # Extract keys for files that have them
         files_with_keys = 0
@@ -75,7 +94,7 @@ class CLI:
                 )
                 if key_data:
                     saved_files = self.extractor.save_extracted_key(
-                        key_data, result.file_path, result.key_hash
+                        key_data, result.file_path, result.key_hash, result
                     )
                     if saved_files:
                         print(f"    ✓ Saved markdown format: {os.path.basename(saved_files.get('md', ''))}")

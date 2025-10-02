@@ -108,7 +108,7 @@ class Reporting:
 
         return report_text
 
-    def generate_key_markdown(self, der_data: bytes, file_path: str, key_hash: str) -> str:
+    def generate_key_markdown(self, der_data: bytes, file_path: str, key_hash: str, analysis_result: DERKeyAnalysis = None) -> str:
         """Generate markdown format for an individual private key."""
         content = []
 
@@ -118,6 +118,21 @@ class Reporting:
         content.append(f"**Hash:** `{key_hash}`")
         content.append(f"**Length:** {len(der_data)} bytes")
         content.append(f"**Extracted:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+        # Add offset information if available
+        if analysis_result and analysis_result.key_offset is not None:
+            content.append(f"**File Offset:** `0x{analysis_result.key_offset:x}`")
+
+        # Add location information if available
+        if analysis_result and analysis_result.location_description:
+            content.append(f"**Location:** {analysis_result.location_description}")
+            if analysis_result.section_name:
+                content.append(f"**Section:** {analysis_result.section_name}")
+            if analysis_result.resource_type:
+                content.append(f"**Resource Type:** {analysis_result.resource_type}")
+            if analysis_result.resource_name:
+                content.append(f"**Resource Name:** {analysis_result.resource_name}")
+
         content.append("")
         content.append("## ⚠️ Security Warning")
         content.append("")
@@ -134,6 +149,21 @@ class Reporting:
         content.append(f"- **Algorithm:** ECDSA P-256")
         content.append(f"- **Format:** DER-encoded")
         content.append(f"- **Security Level:** 256-bit")
+
+        # Add location details if available
+        if analysis_result and analysis_result.location_description:
+            content.append("")
+            content.append("## 📍 Location Details")
+            content.append("")
+            content.append(f"- **Location:** {analysis_result.location_description}")
+            if analysis_result.section_name:
+                content.append(f"- **PE Section:** {analysis_result.section_name}")
+            if analysis_result.resource_type:
+                content.append(f"- **Resource Type:** {analysis_result.resource_type}")
+            if analysis_result.resource_name:
+                content.append(f"- **Resource Name:** {analysis_result.resource_name}")
+            if analysis_result.key_offset is not None:
+                content.append(f"- **File Offset:** 0x{analysis_result.key_offset:x}")
 
         return "\n".join(content)
 
