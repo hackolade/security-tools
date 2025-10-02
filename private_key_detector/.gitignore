@@ -2,13 +2,6 @@
 extracted_keys/
 *.der
 *.pem
-*.txt
-*.json
-
-# Analysis reports
-*.md
-security_report*.md
-*_security_report.md
 
 # Temporary files
 *.tmp
