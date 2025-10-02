@@ -78,33 +78,6 @@ class Reporting:
                 report.append(f"- **Public key:** `{result.public_key[:32]}...`")
             report.append("")
 
-        # Recommendations
-        report.append("## Security Recommendations")
-        report.append("")
-
-        if files_with_matching_keys > 0:
-            report.append("### Immediate Actions Required")
-            report.append("")
-            report.append("1. **Remove embedded private keys** from all affected applications")
-            report.append("2. **Implement proper key management** system")
-            report.append("3. **Use external key storage** or key derivation")
-            report.append("4. **Rotate all affected keys** immediately")
-            report.append("5. **Conduct security audit** of all affected applications")
-            report.append("")
-            report.append("### Long-term Measures")
-            report.append("")
-            report.append("1. **Implement secure key management** practices")
-            report.append("2. **Use hardware security modules (HSMs)** where possible")
-            report.append("3. **Implement key rotation policies**")
-            report.append("4. **Regular security audits** of embedded secrets")
-        else:
-            report.append("### Preventive Measures")
-            report.append("")
-            report.append("1. **Implement secure coding practices**")
-            report.append("2. **Regular security scanning** of executables")
-            report.append("3. **Avoid embedding secrets** in client applications")
-            report.append("4. **Use secure key management systems**")
-
         report.append("")
 
         # Technical Details
