@@ -1,0 +1,33 @@
+# Extracted private keys - DO NOT COMMIT
+extracted_keys/
+*.der
+*.pem
+*.txt
+*.json
+
+# Analysis reports
+*.md
+security_report*.md
+*_security_report.md
+
+# Temporary files
+*.tmp
+*.temp
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

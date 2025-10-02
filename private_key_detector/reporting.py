@@ -1,0 +1,267 @@
+#!/usr/bin/env python3
+"""
+Comprehensive reporting module for the DER Private Key Analyzer.
+
+This module handles all reporting functionality including:
+- Markdown report generation
+- Key extraction summaries
+- Individual key reports
+- Analysis summaries
+"""
+
+import os
+import base64
+from datetime import datetime
+from pathlib import Path
+from typing import List, Dict, Optional
+from models import DERKeyAnalysis
+
+
+class Reporting:
+    """Handles all reporting functionality for the DER Private Key Analyzer."""
+
+    def __init__(self, extracted_keys_dir: Path = None):
+        """Initialize the reporting module."""
+        self.extracted_keys_dir = extracted_keys_dir or Path("extracted_keys")
+
+    def generate_markdown_report(self, results: List[DERKeyAnalysis], output_file: Optional[str] = None, reference_key: Optional[bytes] = None) -> str:
+        """Generate a comprehensive markdown security report."""
+        report = []
+
+        # Header
+        report.append("# DER Private Key Security Analysis Report")
+        report.append("")
+        report.append(f"**Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        report.append("")
+
+        # Executive Summary
+        total_files = len(results)
+        files_with_keys = sum(1 for r in results if r.key_found)
+        files_with_matching_keys = sum(1 for r in results if r.matches_reference)
+
+        report.append("## Executive Summary")
+        report.append("")
+        report.append(f"- **Total files analyzed:** {total_files}")
+        report.append(f"- **Files with embedded private keys:** {files_with_keys}")
+        report.append(f"- **Files with matching reference key:** {files_with_matching_keys}")
+        report.append("")
+
+        # Security Risk Assessment
+        report.append("## Security Risk Assessment")
+        report.append("")
+        if files_with_matching_keys > 0:
+            report.append("🚨 **HIGH RISK:** Multiple applications share the same embedded private key")
+            report.append("")
+            report.append("### Risk Factors")
+            report.append("- Private keys can be extracted by reverse engineering")
+            report.append("- Compromises security of all affected applications")
+            report.append("- Violates secure key management best practices")
+            report.append("- Potential for authentication bypass attacks")
+        else:
+            report.append("✅ **LOW RISK:** No shared embedded private keys detected")
+        report.append("")
+
+        # Detailed Results
+        report.append("## Detailed Analysis Results")
+        report.append("")
+
+        for i, result in enumerate(results, 1):
+            report.append(f"### {i}. {os.path.basename(result.file_path)}")
+            report.append("")
+            report.append(f"- **File size:** {result.file_size:,} bytes")
+            report.append(f"- **Key found:** {'YES' if result.key_found else 'NO'}")
+
+            if result.key_found:
+                report.append(f"- **Key offset:** `0x{result.key_offset:x}`")
+                report.append(f"- **Key length:** {result.key_length} bytes")
+                report.append(f"- **Key hash:** `{result.key_hash[:16]}...`")
+                report.append(f"- **Public key:** `{result.public_key[:32]}...`")
+            report.append("")
+
+        # Recommendations
+        report.append("## Security Recommendations")
+        report.append("")
+
+        if files_with_matching_keys > 0:
+            report.append("### Immediate Actions Required")
+            report.append("")
+            report.append("1. **Remove embedded private keys** from all affected applications")
+            report.append("2. **Implement proper key management** system")
+            report.append("3. **Use external key storage** or key derivation")
+            report.append("4. **Rotate all affected keys** immediately")
+            report.append("5. **Conduct security audit** of all affected applications")
+            report.append("")
+            report.append("### Long-term Measures")
+            report.append("")
+            report.append("1. **Implement secure key management** practices")
+            report.append("2. **Use hardware security modules (HSMs)** where possible")
+            report.append("3. **Implement key rotation policies**")
+            report.append("4. **Regular security audits** of embedded secrets")
+        else:
+            report.append("### Preventive Measures")
+            report.append("")
+            report.append("1. **Implement secure coding practices**")
+            report.append("2. **Regular security scanning** of executables")
+            report.append("3. **Avoid embedding secrets** in client applications")
+            report.append("4. **Use secure key management systems**")
+
+        report.append("")
+
+        # Technical Details
+        report.append("## Technical Details")
+        report.append("")
+        report.append("### Key Properties")
+        if any(r.key_found for r in results):
+            report.append("- **Format:** DER-encoded ECDSA private key")
+            report.append("- **Algorithm:** ECDSA with P-256 curve")
+            report.append("- **Security:** 256-bit key strength")
+        report.append("")
+        report.append("### Detection Method")
+        report.append("- Binary pattern matching for DER structures")
+        report.append("- ASN.1 structure analysis")
+        report.append("- Cryptographic algorithm identification")
+        report.append("")
+
+        # Footer
+        report.append("---")
+        report.append("*Report generated by DER Private Key Analyzer*")
+
+        report_text = "\n".join(report)
+
+        if output_file:
+            with open(output_file, 'w') as f:
+                f.write(report_text)
+            print(f"Markdown report saved to: {output_file}")
+
+        return report_text
+
+    def generate_key_markdown(self, der_data: bytes, file_path: str, key_hash: str) -> str:
+        """Generate markdown format for an individual private key."""
+        content = []
+
+        content.append(f"# Extracted Private Key")
+        content.append("")
+        content.append(f"**Source:** `{file_path}`")
+        content.append(f"**Hash:** `{key_hash}`")
+        content.append(f"**Length:** {len(der_data)} bytes")
+        content.append(f"**Extracted:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        content.append("")
+        content.append("## ⚠️ Security Warning")
+        content.append("")
+        content.append("**Private key found in executable!** This represents a significant security vulnerability.")
+        content.append("")
+        content.append("## 🔑 Private Key (PEM Format)")
+        content.append("")
+        content.append("```pem")
+        content.append(self._generate_pem_format(der_data))
+        content.append("```")
+        content.append("")
+        content.append("## 📊 Key Information")
+        content.append("")
+        content.append(f"- **Algorithm:** ECDSA P-256")
+        content.append(f"- **Format:** DER-encoded")
+        content.append(f"- **Security Level:** 256-bit")
+
+        return "\n".join(content)
+
+    def _generate_pem_format(self, der_data: bytes) -> str:
+        """Generate PEM format from DER data."""
+        try:
+            b64_data = base64.b64encode(der_data).decode('ascii')
+            pem_content = f"-----BEGIN PRIVATE KEY-----\n"
+
+            # Split into 64-character lines
+            for i in range(0, len(b64_data), 64):
+                pem_content += b64_data[i:i+64] + "\n"
+
+            pem_content += "-----END PRIVATE KEY-----\n"
+            return pem_content
+        except:
+            return ""
+
+    def list_extracted_keys(self) -> List[Dict[str, str]]:
+        """List all extracted keys with their metadata."""
+        extracted_keys = []
+
+        if not self.extracted_keys_dir.exists():
+            return extracted_keys
+
+        # Find all markdown files and extract metadata from filenames
+        for md_file in self.extracted_keys_dir.glob("*.md"):
+            try:
+                # Extract metadata from filename: parent_dir_filename_hash.md
+                filename = md_file.stem
+                if '_' in filename:
+                    # Split into parts: parent_dir_filename and hash
+                    parts = filename.split('_')
+                    if len(parts) >= 2:
+                        # Last part is the hash
+                        hash_part = parts[-1]
+                        # Everything before the last part is the source
+                        source_part = '_'.join(parts[:-1])
+
+                        key_info = {
+                            'source_file': source_part,
+                            'key_hash': hash_part,
+                            'key_length': 138,  # Standard ECDSA P-256 length
+                            'algorithm': 'ECDSA',
+                            'curve': 'P-256',
+                            'extracted_files': {'md': str(md_file)}
+                        }
+                        extracted_keys.append(key_info)
+            except Exception as e:
+                print(f"Error reading metadata from {md_file}: {e}")
+
+        return extracted_keys
+
+    def generate_extraction_summary(self) -> str:
+        """Generate a summary of extracted keys."""
+        extracted_keys = self.list_extracted_keys()
+
+        if not extracted_keys:
+            return "No keys have been extracted yet."
+
+        summary = []
+        summary.append("📁 EXTRACTED KEYS SUMMARY")
+        summary.append("=" * 50)
+        summary.append("")
+
+        for i, key_info in enumerate(extracted_keys, 1):
+            summary.append(f"{i}. {key_info.get('source_file', 'Unknown')}")
+            summary.append(f"   Hash: {key_info.get('key_hash', 'Unknown')[:16]}...")
+            summary.append(f"   Length: {key_info.get('key_length', 0)} bytes")
+            summary.append(f"   Algorithm: {key_info.get('algorithm', 'Unknown')}")
+            summary.append(f"   Curve: {key_info.get('curve', 'Unknown')}")
+
+            extracted_files = key_info.get('extracted_files', {})
+            if extracted_files:
+                md_file = extracted_files.get('md', '')
+                if md_file:
+                    summary.append(f"   File: {os.path.basename(md_file)}")
+            summary.append("")
+
+        summary.append(f"Total extracted keys: {len(extracted_keys)}")
+        summary.append(f"Extraction directory: {self.extracted_keys_dir}")
+        summary.append("")
+        summary.append("💡 TIP: Read the .md files for key information")
+
+        return "\n".join(summary)
+
+    def generate_analysis_summary(self, results: List[DERKeyAnalysis]) -> str:
+        """Generate a concise analysis summary."""
+        total_files = len(results)
+        files_with_keys = sum(1 for r in results if r.key_found)
+        files_with_matching_keys = sum(1 for r in results if r.matches_reference)
+
+        summary = []
+        summary.append("Analysis complete:")
+        summary.append(f"  Files analyzed: {total_files}")
+        summary.append(f"  Files with keys: {files_with_keys}")
+        summary.append(f"  Files with matching keys: {files_with_matching_keys}")
+
+        if files_with_matching_keys > 0:
+            summary.append("  🚨 SECURITY RISK: Shared embedded private keys detected!")
+        else:
+            summary.append("  ✅ No shared embedded private keys found")
+
+        return "\n".join(summary)
