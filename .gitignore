@@ -3,6 +3,10 @@ extracted_keys/
 *.der
 *.pem
 
+# Generated reports - DO NOT COMMIT
+private_key_detector/reports/
+*.md
+
 # Temporary files
 *.tmp
 *.temp

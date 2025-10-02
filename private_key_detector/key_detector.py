@@ -11,6 +11,14 @@ import hashlib
 from typing import List, Dict, Optional
 from models import DERKeyAnalysis
 
+# Optional PE analysis - only import if available
+try:
+    from pe_analyzer import PEAnalyzer
+    PE_ANALYSIS_AVAILABLE = True
+except ImportError:
+    PE_ANALYSIS_AVAILABLE = False
+    PEAnalyzer = None
+
 
 class KeyDetector:
     """Handles detection of embedded DER private keys in executable files."""
@@ -18,6 +26,10 @@ class KeyDetector:
     def __init__(self):
         """Initialize the key detector."""
         self.reference_key: Optional[bytes] = None
+        if PE_ANALYSIS_AVAILABLE:
+            self.pe_analyzer = PEAnalyzer()
+        else:
+            self.pe_analyzer = None
 
     def load_reference_key(self, file_path: str) -> bool:
         """Load a reference DER key for comparison."""
@@ -85,6 +97,11 @@ class KeyDetector:
             public_key=""
         )
 
+        # Try to analyze as PE file for location information (if PE analysis is available)
+        pe_analysis_success = False
+        if self.pe_analyzer:
+            pe_analysis_success = self.pe_analyzer.analyze_file(file_path)
+
         try:
             with open(file_path, 'rb') as f:
                 content = f.read()
@@ -126,11 +143,22 @@ class KeyDetector:
                             result.key_hash = key_hash
                             result.public_key = public_key
 
+                            # Get location information if PE analysis was successful
+                            if pe_analysis_success:
+                                location_info = self.pe_analyzer.get_location_info(offset)
+                                result.section_name = location_info.section_name
+                                result.resource_type = location_info.resource_type
+                                result.resource_name = location_info.resource_name
+                                result.location_description = location_info.location_description
+
                             # Check if it matches reference key
                             if self.reference_key and der_data == self.reference_key:
                                 result.matches_reference = True
 
-                            print(f"  ✓ Found DER private key at offset 0x{offset:x}")
+                            location_msg = f" at offset 0x{offset:x}"
+                            if result.location_description:
+                                location_msg += f" ({result.location_description})"
+                            print(f"  ✓ Found DER private key{location_msg}")
                             break
 
                     if result.key_found:
@@ -143,6 +171,10 @@ class KeyDetector:
 
         except Exception as e:
             print(f"  ✗ Error analyzing file: {e}")
+        finally:
+            # Clean up PE analyzer (if available)
+            if self.pe_analyzer:
+                self.pe_analyzer.cleanup()
 
         return result
 

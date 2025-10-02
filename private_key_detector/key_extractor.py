@@ -40,7 +40,7 @@ class KeyExtractor:
             print(f"Error extracting key from {file_path}: {e}")
             return b""
 
-    def save_extracted_key(self, key_data: bytes, file_path: str, key_hash: str) -> Dict[str, str]:
+    def save_extracted_key(self, key_data: bytes, file_path: str, key_hash: str, analysis_result=None) -> Dict[str, str]:
         """Save extracted key in markdown format."""
         if not key_data:
             return {}
@@ -64,7 +64,7 @@ class KeyExtractor:
         try:
             # Save only markdown format
             md_file = self.extracted_keys_dir / f"{safe_filename}_{key_hash_short}.md"
-            md_content = self.reporting.generate_key_markdown(key_data, file_path, key_hash)
+            md_content = self.reporting.generate_key_markdown(key_data, file_path, key_hash, analysis_result)
             with open(md_file, 'w') as f:
                 f.write(md_content)
             saved_files['md'] = str(md_file)

@@ -9,6 +9,7 @@ for the analyzer application.
 import argparse
 import sys
 import os
+from pathlib import Path
 from typing import List
 from key_detector import KeyDetector
 from key_extractor import KeyExtractor
@@ -75,13 +76,19 @@ class CLI:
                 )
                 if key_data:
                     saved_files = self.extractor.save_extracted_key(
-                        key_data, result.file_path, result.key_hash
+                        key_data, result.file_path, result.key_hash, result
                     )
                     if saved_files:
                         print(f"    ✓ Saved markdown format: {os.path.basename(saved_files.get('md', ''))}")
 
         # Generate markdown report
-        report = self.report_generator.generate_markdown_report(results, getattr(self.args, 'output', None))
+        output_file = getattr(self.args, 'output', None)
+        if output_file and not os.path.isabs(output_file):
+            # If output file is relative, put it in the reports directory
+            reports_dir = Path("reports")
+            reports_dir.mkdir(exist_ok=True)
+            output_file = reports_dir / output_file
+        report = self.report_generator.generate_markdown_report(results, str(output_file) if output_file else None)
 
         # Print analysis summary using reporting module
         print(f"\n{self.reporting.generate_analysis_summary(results)}")
