@@ -48,7 +48,9 @@ class KeyDetector:
             'is_valid_der': False,
             'algorithm': 'Unknown',
             'curve': 'Unknown',
-            'key_length': len(der_data)
+            'key_length': len(der_data),
+            'is_certificate': False,
+            'is_private_key': False
         }
 
         try:
@@ -59,6 +61,36 @@ class KeyDetector:
             if der_data[0] == 0x30:
                 analysis['is_valid_der'] = True
 
+            # Check for certificate OIDs (these indicate X.509 certificates)
+            certificate_oids = [
+                b'\x06\x03\x55\x04\x03',  # Common Name (2.5.4.3)
+                b'\x06\x03\x55\x04\x06',  # Country (2.5.4.6)
+                b'\x06\x03\x55\x04\x08',  # State (2.5.4.8)
+                b'\x06\x03\x55\x04\x07',  # Locality (2.5.4.7)
+                b'\x06\x03\x55\x04\x0a',  # Organization (2.5.4.10)
+                b'\x06\x03\x55\x04\x0b',  # Organizational Unit (2.5.4.11)
+            ]
+
+            # Check for certificate-specific patterns
+            has_certificate_oids = any(oid in der_data for oid in certificate_oids)
+
+            # Check for certificate text patterns
+            certificate_text_patterns = [
+                b'CERTIFICATE',
+                b'TRUST',
+                b'CA',
+                b'ROOT',
+                b'INTERMEDIATE',
+                b'AUTHORITY'
+            ]
+
+            has_certificate_text = any(pattern in der_data for pattern in certificate_text_patterns)
+
+            # If it has certificate OIDs or text, it's likely a certificate
+            if has_certificate_oids or has_certificate_text:
+                analysis['is_certificate'] = True
+                return analysis  # Don't analyze further if it's a certificate
+
             # Check for ECDSA algorithm OID
             if b'\x2a\x86\x48\xce\x3d' in der_data:
                 analysis['algorithm'] = 'ECDSA'
@@ -66,6 +98,10 @@ class KeyDetector:
             # Check for P-256 curve OID
             if b'\x2a\x86\x48\xce\x3d\x03\x01\x07' in der_data:
                 analysis['curve'] = 'P-256'
+
+            # If it has ECDSA and P-256 OIDs but no certificate patterns, it's likely a private key
+            if analysis['algorithm'] == 'ECDSA' and analysis['curve'] == 'P-256':
+                analysis['is_private_key'] = True
 
         except Exception:
             pass
@@ -111,7 +147,12 @@ class KeyDetector:
                     der_data = content[original_offset:original_offset + length]
                     analysis = self._analyze_der_structure(der_data)
 
-                    if analysis['is_valid_der'] and analysis['algorithm'] == 'ECDSA' and analysis['curve'] == 'P-256':
+                    # Only accept if it's a valid DER private key (not a certificate)
+                    if (analysis['is_valid_der'] and
+                        analysis['is_private_key'] and
+                        not analysis['is_certificate'] and
+                        analysis['algorithm'] == 'ECDSA' and
+                        analysis['curve'] == 'P-256'):
                         # Found the original key - use it for compatibility
                         key_hash = hashlib.sha256(der_data).hexdigest()
                         public_key = self._extract_public_key(der_data)
@@ -151,7 +192,12 @@ class KeyDetector:
                         # Analyze DER structure
                         analysis = self._analyze_der_structure(der_data)
 
-                        if analysis['is_valid_der'] and analysis['algorithm'] == 'ECDSA' and analysis['curve'] == 'P-256':
+                        # Only accept if it's a valid DER private key (not a certificate)
+                        if (analysis['is_valid_der'] and
+                            analysis['is_private_key'] and
+                            not analysis['is_certificate'] and
+                            analysis['algorithm'] == 'ECDSA' and
+                            analysis['curve'] == 'P-256'):
                             # Calculate hash of the key data
                             key_hash = hashlib.sha256(der_data).hexdigest()
 
@@ -224,7 +270,12 @@ class KeyDetector:
                         # Analyze DER structure
                         analysis = self._analyze_der_structure(der_data)
 
-                        if analysis['is_valid_der'] and analysis['algorithm'] == 'ECDSA' and analysis['curve'] == 'P-256':
+                        # Only accept if it's a valid DER private key (not a certificate)
+                        if (analysis['is_valid_der'] and
+                            analysis['is_private_key'] and
+                            not analysis['is_certificate'] and
+                            analysis['algorithm'] == 'ECDSA' and
+                            analysis['curve'] == 'P-256'):
                             # Calculate hash of the key data
                             key_hash = hashlib.sha256(der_data).hexdigest()
 
