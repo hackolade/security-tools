@@ -327,7 +327,7 @@ class Reporting:
         for key_hash, keys in sorted(key_groups.items(), key=lambda x: len(x[1]), reverse=True):
             file_count = len(set(k.file_path for k in keys))
             instance_count = len(keys)
-            status = "🚨 SHARED" if len(keys) > 1 else "✅ UNIQUE"
+            status = "🚨 SHARED" if len(keys) > 1 else "⚠️ UNIQUE"
             content.append(f"| `{key_hash[:16]}...` | {file_count} | {instance_count} | {status} |")
 
         content.append("")
@@ -499,6 +499,6 @@ class Reporting:
         if files_with_matching_keys > 0:
             summary.append("  📊 Shared embedded private keys detected")
         else:
-            summary.append("  ✅ No shared embedded private keys found")
+            summary.append("  ✅ No embedded private keys found")
 
         return "\n".join(summary)

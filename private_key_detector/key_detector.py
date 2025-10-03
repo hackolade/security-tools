@@ -246,7 +246,7 @@ class KeyDetector:
                             if self.reference_key and der_data == self.reference_key:
                                 result.matches_reference = True
 
-                            print(f"  ✓ Found DER private key at offset 0x{offset:x}")
+                            print(f"  ⚠️ Found DER private key at offset 0x{offset:x}")
                             break
 
                     if result.key_found:
@@ -349,7 +349,7 @@ class KeyDetector:
                                 key_result.location_description = location_info.location_description
 
                             all_keys.append(key_result)
-                            print(f"  ✓ Found DER private key at offset 0x{offset:x} (hash: {key_hash[:16]}...)")
+                            print(f"  ⚠️ Found DER private key at offset 0x{offset:x} (hash: {key_hash[:16]}...)")
                             break
 
                     offset += 1

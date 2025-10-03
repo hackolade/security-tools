@@ -153,7 +153,7 @@ class CLI:
             for key_hash in all_key_hashes:
                 if key_hash in found_hashes:
                     matching_key = next(key for key in keys if key.key_hash == key_hash)
-                    print(f"   ✅ {key_hash[:16]}... at 0x{matching_key.key_offset:x}")
+                    print(f"   ⚠️ {key_hash[:16]}... at 0x{matching_key.key_offset:x}")
                 else:
                     print(f"   ❌ {key_hash[:16]}... NOT FOUND")
             print()
