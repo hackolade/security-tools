@@ -108,6 +108,210 @@ class Reporting:
 
         return report_text
 
+    def generate_key_summary_report(self, all_results: Dict[str, List[DERKeyAnalysis]], output_dir: str = "extracted_keys") -> str:
+        """Generate a summary report of all distinct keys found across all files."""
+        import os
+        from pathlib import Path
+
+        # Create summary subfolder
+        summary_dir = Path(output_dir) / "key_summary"
+        summary_dir.mkdir(exist_ok=True)
+
+        # Collect all keys and group by hash
+        key_groups = {}
+        for file_path, keys in all_results.items():
+            for key in keys:
+                if key.key_found:
+                    if key.key_hash not in key_groups:
+                        key_groups[key.key_hash] = []
+                    key_groups[key.key_hash].append(key)
+
+        # Generate summary report for each distinct key
+        summary_files = []
+        for key_hash, keys in key_groups.items():
+            if len(keys) > 0:
+                # Create filename using key hash
+                filename = f"{key_hash[:16]}.md"
+                file_path = summary_dir / filename
+
+                # Generate markdown content
+                content = self._generate_key_summary_markdown(key_hash, keys)
+
+                # Write file
+                with open(file_path, 'w') as f:
+                    f.write(content)
+
+                summary_files.append(str(file_path))
+                print(f"  ✓ Generated key summary: {filename}")
+
+        # Generate master summary
+        master_summary = self._generate_master_summary(key_groups)
+        master_file = summary_dir / "00_MASTER_SUMMARY.md"
+        with open(master_file, 'w') as f:
+            f.write(master_summary)
+
+        print(f"  ✓ Generated master summary: 00_MASTER_SUMMARY.md")
+        summary_files.append(str(master_file))
+
+        return str(summary_dir)
+
+    def _generate_key_summary_markdown(self, key_hash: str, keys: List[DERKeyAnalysis]) -> str:
+        """Generate markdown for a specific key showing all files that contain it."""
+        content = []
+
+        content.append(f"# Private Key Summary")
+        content.append("")
+        content.append(f"**Key Hash:** `{key_hash}`")
+        content.append(f"**Total Files:** {len(keys)}")
+        content.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        content.append("")
+
+        # Key information
+        if keys:
+            first_key = keys[0]
+            content.append("## 🔑 Key Information")
+            content.append("")
+            content.append(f"- **Algorithm:** ECDSA P-256")
+            content.append(f"- **Format:** DER-encoded")
+            content.append(f"- **Security Level:** 256-bit")
+            content.append(f"- **Length:** {first_key.key_length} bytes")
+            content.append("")
+
+            # Add PEM content
+            content.append("## 🔐 Private Key (PEM Format)")
+            content.append("")
+            content.append("```pem")
+            try:
+                # Extract key data from the first file containing this key
+                with open(first_key.file_path, 'rb') as f:
+                    f.seek(first_key.key_offset)
+                    key_data = f.read(first_key.key_length)
+                    pem_content = self._generate_pem_format(key_data)
+                    content.append(pem_content)
+            except Exception as e:
+                content.append(f"Error extracting key data: {e}")
+            content.append("```")
+            content.append("")
+
+        # Files containing this key
+        content.append("## 📁 Files Containing This Key")
+        content.append("")
+        content.append("| File | Offset | Length | Section |")
+        content.append("|------|--------|--------|---------|")
+
+        for key in keys:
+            # Include parent folder name to distinguish files with same name
+            file_name = os.path.basename(key.file_path)
+            parent_folder = os.path.basename(os.path.dirname(key.file_path))
+            display_name = f"{parent_folder}/{file_name}" if parent_folder else file_name
+            offset_hex = f"0x{key.key_offset:x}"
+            section = key.section_name or "Unknown"
+            content.append(f"| `{display_name}` | `{offset_hex}` | {key.key_length} bytes | {section} |")
+
+        content.append("")
+
+        # Detailed file information
+        content.append("## 📋 Detailed File Information")
+        content.append("")
+        for i, key in enumerate(keys, 1):
+            file_name = os.path.basename(key.file_path)
+            parent_folder = os.path.basename(os.path.dirname(key.file_path))
+            display_name = f"{parent_folder}/{file_name}" if parent_folder else file_name
+            content.append(f"### {i}. {display_name}")
+            content.append("")
+            content.append(f"- **Full Path:** `{key.file_path}`")
+            content.append(f"- **File Size:** {key.file_size:,} bytes")
+            content.append(f"- **Key Offset:** `0x{key.key_offset:x}`")
+            content.append(f"- **Key Length:** {key.key_length} bytes")
+            if key.section_name:
+                content.append(f"- **PE Section:** {key.section_name}")
+            if key.resource_type:
+                content.append(f"- **Resource Type:** {key.resource_type}")
+            if key.resource_name:
+                content.append(f"- **Resource Name:** {key.resource_name}")
+            if key.location_description:
+                content.append(f"- **Location:** {key.location_description}")
+            content.append("")
+
+        return "\n".join(content)
+
+    def _generate_master_summary(self, key_groups: Dict[str, List[DERKeyAnalysis]]) -> str:
+        """Generate master summary of all keys found."""
+        content = []
+
+        content.append("# Master Key Summary Report")
+        content.append("")
+        content.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        content.append(f"**Total Distinct Keys:** {len(key_groups)}")
+        content.append("")
+
+        # Count total files and keys
+        total_files = set()
+        total_keys = 0
+        for keys in key_groups.values():
+            total_keys += len(keys)
+            for key in keys:
+                total_files.add(key.file_path)
+
+        content.append(f"**Total Files Analyzed:** {len(total_files)}")
+        content.append(f"**Total Key Instances:** {total_keys}")
+        content.append("")
+
+        # Security overview
+        content.append("## 🚨 Security Overview")
+        content.append("")
+        shared_keys = [k for k, v in key_groups.items() if len(v) > 1]
+        unique_keys = [k for k, v in key_groups.items() if len(v) == 1]
+
+        content.append(f"- **Shared Keys:** {len(shared_keys)} (keys found in multiple files)")
+        content.append(f"- **Unique Keys:** {len(unique_keys)} (keys found in single files)")
+        content.append("")
+
+        if shared_keys:
+            content.append("⚠️ **CRITICAL SECURITY RISK:** Shared private keys detected!")
+            content.append("")
+            content.append("The following keys are embedded in multiple executable files:")
+            content.append("")
+            for key_hash in shared_keys:
+                keys = key_groups[key_hash]
+                file_names = []
+                for k in keys:
+                    file_name = os.path.basename(k.file_path)
+                    parent_folder = os.path.basename(os.path.dirname(k.file_path))
+                    display_name = f"{parent_folder}/{file_name}" if parent_folder else file_name
+                    file_names.append(display_name)
+                content.append(f"- **Key `{key_hash}`**: Found in {len(keys)} files")
+                content.append(f"  - Files: {', '.join(file_names)}")
+            content.append("")
+
+        # Summary table
+        content.append("## 📊 Key Summary Table")
+        content.append("")
+        content.append("| Key Hash | Files | Instances | Status |")
+        content.append("|----------|-------|-----------|--------|")
+
+        for key_hash, keys in sorted(key_groups.items(), key=lambda x: len(x[1]), reverse=True):
+            file_count = len(set(k.file_path for k in keys))
+            instance_count = len(keys)
+            status = "🚨 SHARED" if len(keys) > 1 else "✅ UNIQUE"
+            content.append(f"| `{key_hash[:16]}...` | {file_count} | {instance_count} | {status} |")
+
+        content.append("")
+
+        # Individual key reports
+        content.append("## 📁 Individual Key Reports")
+        content.append("")
+        content.append("Detailed reports for each key are available in the following files:")
+        content.append("")
+
+        for key_hash in sorted(key_groups.keys()):
+            filename = f"{key_hash[:16]}.md"
+            keys = key_groups[key_hash]
+            file_count = len(set(k.file_path for k in keys))
+            content.append(f"- **[{filename}]({filename})** - {file_count} files, {len(keys)} instances")
+
+        return "\n".join(content)
+
     def generate_key_markdown(self, der_data: bytes, file_path: str, key_hash: str, analysis_result: DERKeyAnalysis = None) -> str:
         """Generate markdown format for an individual private key."""
         content = []

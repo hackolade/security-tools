@@ -102,6 +102,11 @@ class CLI:
         # Generate markdown report
         report = self.report_generator.generate_markdown_report(results, getattr(self.args, 'output', None))
 
+        # Generate key summary report
+        print("📊 Generating key summary reports...")
+        summary_dir = self.reporting.generate_key_summary_report(all_results)
+        print(f"📁 Key summary reports saved to: {summary_dir}")
+
         # Print analysis summary using reporting module
         print(f"\n{self.reporting.generate_analysis_summary(results)}")
 
