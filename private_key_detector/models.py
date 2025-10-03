@@ -26,3 +26,12 @@ class DERKeyAnalysis:
     resource_type: Optional[str] = None
     resource_name: Optional[str] = None
     location_description: Optional[str] = None
+    # Detailed key information fields
+    key_type: Optional[str] = None
+    algorithm_name: Optional[str] = None
+    curve_name: Optional[str] = None
+    key_size: Optional[str] = None
+    security_level: Optional[str] = None
+    usage: Optional[str] = None
+    key_id: Optional[str] = None
+    private_key_hex: Optional[str] = None

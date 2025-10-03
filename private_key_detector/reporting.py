@@ -193,6 +193,40 @@ class Reporting:
             content.append("```")
             content.append("")
 
+            # Add detailed key information
+            content.append("## 🔓 Public Key Information")
+            content.append("")
+            content.append(f"- **Public Key Hash:** `{first_key.public_key}`")
+            content.append(f"- **Key Type:** {first_key.key_type or 'ECDSA P-256 Public Key'}")
+            content.append(f"- **Extracted From:** Private key DER structure")
+            content.append("")
+
+            # Add comprehensive key details
+            content.append("## 🔍 Detailed Key Analysis")
+            content.append("")
+            content.append(f"- **Algorithm:** {first_key.algorithm_name or 'ECDSA'}")
+            content.append(f"- **Curve:** {first_key.curve_name or 'P-256'}")
+            content.append(f"- **Key Size:** {first_key.key_size or '256 bits'}")
+            content.append(f"- **Security Level:** {first_key.security_level or 'High'}")
+            content.append(f"- **Usage:** {first_key.usage or 'Digital Signature and Authentication'}")
+            content.append(f"- **Key ID:** {first_key.key_id or 'Unknown'}")
+            content.append("")
+
+            # Add raw key data
+            if first_key.private_key_hex:
+                content.append("## 🔐 Raw Key Data")
+                content.append("")
+                content.append("### Private Key (Hex)")
+                content.append("```")
+                content.append(first_key.private_key_hex)
+                content.append("```")
+                content.append("")
+                content.append("### Public Key (Hex)")
+                content.append("```")
+                content.append(first_key.public_key)
+                content.append("```")
+                content.append("")
+
         # Files containing this key
         content.append("## 📁 Files Containing This Key")
         content.append("")

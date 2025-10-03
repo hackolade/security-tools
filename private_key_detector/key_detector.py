@@ -42,6 +42,68 @@ class KeyDetector:
         except:
             return ""
 
+    def _extract_detailed_key_info(self, der_data: bytes) -> Dict[str, str]:
+        """Extract detailed human-readable information about the key."""
+        info = {
+            'key_type': 'Unknown',
+            'algorithm_name': 'Unknown',
+            'curve_name': 'Unknown',
+            'key_size': 'Unknown',
+            'security_level': 'Unknown',
+            'usage': 'Unknown',
+            'format': 'Unknown',
+            'public_key_hex': '',
+            'private_key_hex': '',
+            'key_id': '',
+            'creation_info': 'Unknown'
+        }
+
+        try:
+            if len(der_data) < 10:
+                return info
+
+            # Basic DER structure analysis
+            info['format'] = 'DER-encoded'
+
+            # Check for ECDSA algorithm
+            if b'\x2a\x86\x48\xce\x3d' in der_data:
+                info['algorithm_name'] = 'Elliptic Curve Digital Signature Algorithm (ECDSA)'
+                info['key_type'] = 'ECDSA Private Key'
+
+            # Check for P-256 curve
+            if b'\x2a\x86\x48\xce\x3d\x03\x01\x07' in der_data:
+                info['curve_name'] = 'P-256 (secp256r1)'
+                info['key_size'] = '256 bits'
+                info['security_level'] = 'High (128-bit equivalent)'
+
+            # Extract public key portion
+            if len(der_data) > 100:
+                public_key_data = der_data[-65:]
+                info['public_key_hex'] = public_key_data.hex()
+
+            # Extract private key portion (middle section typically)
+            if len(der_data) > 50:
+                # Private key is usually in the middle section
+                private_start = len(der_data) // 3
+                private_end = private_start + 32
+                if private_end < len(der_data):
+                    private_key_data = der_data[private_start:private_end]
+                    info['private_key_hex'] = private_key_data.hex()
+
+            # Generate a short key ID
+            if info['public_key_hex']:
+                key_id = hashlib.sha256(info['public_key_hex'].encode()).hexdigest()[:16]
+                info['key_id'] = f"Key-{key_id}"
+
+            # Determine usage based on context
+            info['usage'] = 'Digital Signature and Authentication'
+            info['creation_info'] = 'Embedded in executable file'
+
+        except Exception as e:
+            info['creation_info'] = f'Analysis error: {str(e)}'
+
+        return info
+
     def _analyze_der_structure(self, der_data: bytes) -> Dict[str, any]:
         """Analyze DER structure to extract key information."""
         analysis = {
@@ -163,11 +225,22 @@ class KeyDetector:
                             # Extract public key
                             public_key = self._extract_public_key(der_data)
 
+                            # Extract detailed key information
+                            detailed_info = self._extract_detailed_key_info(der_data)
+
                             result.key_found = True
                             result.key_offset = offset
                             result.key_length = length
                             result.key_hash = key_hash
                             result.public_key = public_key
+                            result.key_type = detailed_info['key_type']
+                            result.algorithm_name = detailed_info['algorithm_name']
+                            result.curve_name = detailed_info['curve_name']
+                            result.key_size = detailed_info['key_size']
+                            result.security_level = detailed_info['security_level']
+                            result.usage = detailed_info['usage']
+                            result.key_id = detailed_info['key_id']
+                            result.private_key_hex = detailed_info['private_key_hex']
 
                             # Check if it matches reference key
                             if self.reference_key and der_data == self.reference_key:
@@ -241,6 +314,9 @@ class KeyDetector:
                             # Extract public key
                             public_key = self._extract_public_key(der_data)
 
+                            # Extract detailed key information
+                            detailed_info = self._extract_detailed_key_info(der_data)
+
                             # Create result for this key
                             key_result = DERKeyAnalysis(
                                 file_path=file_path,
@@ -249,7 +325,15 @@ class KeyDetector:
                                 key_offset=offset,
                                 key_length=length,
                                 key_hash=key_hash,
-                                public_key=public_key
+                                public_key=public_key,
+                                key_type=detailed_info['key_type'],
+                                algorithm_name=detailed_info['algorithm_name'],
+                                curve_name=detailed_info['curve_name'],
+                                key_size=detailed_info['key_size'],
+                                security_level=detailed_info['security_level'],
+                                usage=detailed_info['usage'],
+                                key_id=detailed_info['key_id'],
+                                private_key_hex=detailed_info['private_key_hex']
                             )
 
                             # Add PE analysis if available
