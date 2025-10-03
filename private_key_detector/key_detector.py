@@ -310,7 +310,9 @@ class KeyDetector:
         for key_hash, group in key_groups.items():
             if len(group) > 1:
                 print()
-                print(f"Found {len(group)} shared key(s) with hash {key_hash[:16]}...")
+                key_count = len(group)
+                key_word = "key" if key_count == 1 else "keys"
+                print(f"Found {key_count} shared {key_word} with hash {key_hash[:16]}...")
                 print("Files sharing this key:")
                 for key in group:
                     print(f"  - {key.file_path} (offset: 0x{key.key_offset:x})")
@@ -345,7 +347,9 @@ class KeyDetector:
         for key_hash, group in key_groups.items():
             if len(group) > 1:
                 print()
-                print(f"Found {len(group)} shared key(s) with hash {key_hash[:16]}...")
+                key_count = len(group)
+                key_word = "key" if key_count == 1 else "keys"
+                print(f"Found {key_count} shared {key_word} with hash {key_hash[:16]}...")
                 print("Files sharing this key:")
                 for result in group:
                     print(f"  - {result.file_path}")

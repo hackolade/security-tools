@@ -268,7 +268,7 @@ class Reporting:
         content.append("")
 
         if shared_keys:
-            content.append("⚠️ **CRITICAL SECURITY RISK:** Shared private keys detected!")
+            content.append("**Shared Keys Found:**")
             content.append("")
             content.append("The following keys are embedded in multiple executable files:")
             content.append("")
@@ -337,10 +337,6 @@ class Reporting:
             if analysis_result.resource_name:
                 content.append(f"**Resource Name:** {analysis_result.resource_name}")
 
-        content.append("")
-        content.append("## ⚠️ Security Warning")
-        content.append("")
-        content.append("**Private key found in executable!** This represents a significant security vulnerability.")
         content.append("")
         content.append("## 🔑 Private Key (PEM Format)")
         content.append("")
@@ -467,7 +463,7 @@ class Reporting:
         summary.append(f"  Files with matching keys: {files_with_matching_keys}")
 
         if files_with_matching_keys > 0:
-            summary.append("  🚨 SECURITY RISK: Shared embedded private keys detected!")
+            summary.append("  📊 Shared embedded private keys detected")
         else:
             summary.append("  ✅ No shared embedded private keys found")
 
