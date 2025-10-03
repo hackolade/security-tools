@@ -125,56 +125,14 @@ class KeyDetector:
             with open(file_path, 'rb') as f:
                 content = f.read()
 
-            # Look for DER private key patterns (prioritize 3081 pattern because it  is usually the shortest)
+            # Look for DER private key patterns
             der_patterns = [
-                b'\x30\x81',  # DER sequence with short length (prioritized)
-                b'\x30\x82',  # DER sequence with length
+                b'\x30\x81',  # DER sequence with short length
+                b'\x30\x82',  # DER sequence with long length
                 b'\x30\x80',  # DER sequence with indefinite length
             ]
 
-            # For compatibility with existing security reports, prioritize finding the same type of key
-            # that was found in the original implementation (P-256 ECDSA with specific characteristics)
-            # This ensures consistent offset reporting across different runs
-
-            # First, check if the original offset contains a valid P-256 ECDSA key
-            # This maintains compatibility with existing security reports
-            original_offset = 0xae10cc0
-            if original_offset < len(content):
-                for length in [200, 180, 160, 140, 120, 100]:
-                    if original_offset + length > len(content):
-                        break
-
-                    der_data = content[original_offset:original_offset + length]
-                    analysis = self._analyze_der_structure(der_data)
-
-                    # Only accept if it's a valid DER private key (not a certificate)
-                    if (analysis['is_valid_der'] and
-                        analysis['is_private_key'] and
-                        not analysis['is_certificate'] and
-                        analysis['algorithm'] == 'ECDSA' and
-                        analysis['curve'] == 'P-256'):
-                        # Found the original key - use it for compatibility
-                        key_hash = hashlib.sha256(der_data).hexdigest()
-                        public_key = self._extract_public_key(der_data)
-
-                        result.key_found = True
-                        result.key_offset = original_offset
-                        result.key_length = length
-                        result.key_hash = key_hash
-                        result.public_key = public_key
-
-                        if self.reference_key and der_data == self.reference_key:
-                            result.matches_reference = True
-
-                        print(f"  ✓ Found DER private key at offset 0x{original_offset:x}")
-                        break
-
-                if result.key_found:
-                    return result
-
-            # If original key not found, fall back to standard search
-            # Search for P-256 ECDSA keys with priority given to 3081 pattern and length 200
-            # This matches the original implementation's search strategy
+            # Search for P-256 ECDSA private keys (certificates are filtered out)
             for pattern in der_patterns:
                 offset = 0
                 while True:
@@ -183,6 +141,7 @@ class KeyDetector:
                         break
 
                     # Try to extract DER data starting from this offset
+                    # Try different lengths to find the complete key
                     for length in [200, 180, 160, 140, 120, 100]:
                         if offset + length > len(content):
                             break
@@ -248,7 +207,7 @@ class KeyDetector:
             # Look for DER private key patterns
             der_patterns = [
                 b'\x30\x81',  # DER sequence with short length
-                b'\x30\x82',  # DER sequence with length
+                b'\x30\x82',  # DER sequence with long length
                 b'\x30\x80',  # DER sequence with indefinite length
             ]
 
