@@ -6,6 +6,21 @@ A security analysis tool for detecting embedded DER private keys in executable f
 
 This tool analyzes Windows executable files to detect embedded DER-encoded private keys, which could represent a significant security risk when shared across multiple applications.
 
+## 🚀 Dependency-Free Toolbox
+
+This toolbox is designed to be **completely dependency-free** and requires no external Python packages to run. All functionality is implemented using only Python's standard library, making it:
+
+- **Easy to deploy**: No pip installs or virtual environments required
+- **Portable**: Works on any system with Python 3.6+
+- **Reliable**: No dependency conflicts or version issues
+- **Fast setup**: Download and run immediately
+
+The tool uses only built-in Python modules for:
+- Binary file analysis and pattern matching
+- Cryptographic hash computation (SHA-256)
+- DER structure parsing and ASN.1 analysis
+- Markdown report generation
+- File operations and key extraction
 
 ## Quick Start
 
