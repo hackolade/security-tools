@@ -134,7 +134,9 @@ class CLI:
 
         all_key_hashes = sorted(list(all_key_hashes))
 
-        print(f"📊 Found {len(all_key_hashes)} distinct keys across all files")
+        key_count = len(all_key_hashes)
+        key_word = "key" if key_count == 1 else "keys"
+        print(f"📊 Found {key_count} distinct {key_word} across all files")
         print()
 
         # For each file, show which keys it contains
@@ -144,7 +146,9 @@ class CLI:
             display_name = f"{parent_folder}/{file_name}" if parent_folder else file_name
 
             found_hashes = [key.key_hash for key in keys if key.key_found]
-            print(f"📁 {display_name}: {len(found_hashes)} keys")
+            key_count = len(found_hashes)
+            key_word = "key" if key_count == 1 else "keys"
+            print(f"📁 {display_name}: {key_count} {key_word}")
 
             for key_hash in all_key_hashes:
                 if key_hash in found_hashes:
@@ -165,7 +169,9 @@ class CLI:
                     display_name = f"{parent_folder}/{file_name}" if parent_folder else file_name
                     files_with_key.append(display_name)
 
-            print(f"   🔑 {key_hash[:16]}...: Found in {len(files_with_key)} files")
+            file_count = len(files_with_key)
+            file_word = "file" if file_count == 1 else "files"
+            print(f"   🔑 {key_hash[:16]}...: Found in {file_count} {file_word}")
             if len(files_with_key) > 1:
                 print(f"      Files: {', '.join(files_with_key)}")
 
